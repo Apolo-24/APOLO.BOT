@@ -1,9 +1,11 @@
 import discord
 from discord.ext import commands
 import requests
-import bot_secrets as secrets
 import asyncio
-import yt_dlp
+import os
+import webserver
+DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
+
 
 intents = discord.Intents.default()
 intents.guilds = True
@@ -259,71 +261,11 @@ async def limpiar(ctx):
     else:
         await ctx.send("❌ No tienes permiso para usar este comando.")
    
-@bot.command()  #meter un bot a un vc
-async def join(ctx):
-    if ctx.author.voice:
-        channel = ctx.author.voice.channel
-        await channel.connect()
-        await ctx.send("🔊 Conectado al canal de voz.")
-    else:
-        await ctx.send("❌ Debes estar en un canal de voz.")
-
-@bot.command() #repoducir una cansion
-async def play(ctx, *, query):
-    vc = ctx.voice_client
-
-    if not vc:
-        if ctx.author.voice:
-            channel = ctx.author.voice.channel
-            vc = await channel.connect()
-        else:
-            await ctx.send("❌ Debes estar en un canal de voz.")
-            return
-
-    await ctx.send(f"🔍 Buscando: `{query}`")
-
-    ytdlp_opts = {
-        'format': 'bestaudio/best',
-        'noplaylist': True,
-        'quiet': True,
-        'default_search': 'ytsearch',
-        'extract_flat': 'in_playlist',
-    }
-
-    with yt_dlp.YoutubeDL(ytdlp_opts) as ydl:
-        info = ydl.extract_info(query, download=False)['entries'][0]
-        url = info['url']
-        title = info['title']
-
-    ffmpeg_options = {
-        'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5',
-        'options': '-vn -loglevel quiet -ac 2 -f s16le -ar 48000'
-
-    }
-
-    source = discord.FFmpegPCMAudio(url, **ffmpeg_options)
-    vc.play(source)
-
-    await asyncio.sleep(1)  # Espera 1 segundo para que empiece a reproducir
-    print(f"Está reproduciendo: {vc.is_playing()}")
-
-
-    await ctx.send(f"🎶 Reproduciendo: **{title}**")
-    
-@bot.command() #sacar el bot de un canal de voz
-async def stop(ctx):
-    vc = ctx.voice_client
-    if vc:
-        await vc.disconnect()
-        await ctx.send("⛔ Bot desconectado.")
-    else:
-        await ctx.send("❌ No estoy en ningún canal de voz.")
-
 
 @bot.event  # ✅ Confirmación de que el bot está listo
 async def on_ready():
     bot.add_view(AceptarReglas())
     print(f"Estamos dentro como {bot.user}")
 
-
-bot.run(secrets.TOKEN)
+webserver.keep_alive()
+bot.run(DISCORD_TOKEN)

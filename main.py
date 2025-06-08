@@ -3,12 +3,15 @@ from discord.ext import commands
 import requests
 import bot_secrets as secrets
 import asyncio
+import yt_dlp
 
 intents = discord.Intents.default()
 intents.guilds = True
 intents.message_content = True
 intents.members = True
 intents.presences = True
+role_message_id_1 = 1381020934676156446
+role_message_id_2 = 1381020944264597574
 
 bot = commands.Bot(command_prefix='!', intents=intents)
 
@@ -16,9 +19,21 @@ JOIN_CHANNEL_ID = 1365583231508021300  # Canal de bienvenidas
 BOOST_CHANNEL_ID = 1365860209188147200  # Canal de boosts
 ROL_MIEMBRO_ID = 1365512945551020062 
 ROL_AUTORIZADO_ID = 1380054848598442015
+ADMIN_IDS = [1268620891412107264]
 
+@bot.event  # 🎉 Bienvenida mejorada con embed
+async def on_member_join(member):
+    canal = bot.get_channel(JOIN_CHANNEL_ID)
+    if canal:
+        embed = discord.Embed(
+            title="¡Bienvenido/a!",
+            description=f"{member.mention} acaba de unirse al servidor. 🎉 ¡Disfruta tu estancia!",
+            color=discord.Color.purple()
+        )
+        embed.set_image(url="https://i.imgur.com/sMo35vf.jpeg")  # Sin espacios al final
+        await canal.send(embed=embed)
 
-class AceptarReglas(discord.ui.View):  
+class AceptarReglas(discord.ui.View):  #boton de aceptar reglas
     def __init__(self):
         super().__init__(timeout=None)
 
@@ -31,11 +46,11 @@ class AceptarReglas(discord.ui.View):
         else:
             await interaction.response.send_message("❌ No se encontró el rol para asignar.", ephemeral=True)
 
-@bot.command()    #mensage de reglas
+@bot.command() #mensage de reglas
 async def reglas(ctx):
-    if ctx.author.id != 1268620891412107264:
+    if ctx.author.id not in ADMIN_IDS:
         return await ctx.send("❌ Solo el administrador puede usar este comando.")
-
+    
     await ctx.message.delete()  # Borra el mensaje "!reglas"
 
     embed = discord.Embed(
@@ -101,8 +116,6 @@ async def reglas(ctx):
 
     await ctx.send(embed=embed, view=AceptarReglas())
 
-
-
 @bot.event  # 🚀 Mensaje de boost
 async def on_member_update(before, after):
     if before.premium_since is None and after.premium_since is not None:
@@ -115,7 +128,6 @@ async def on_member_update(before, after):
             )
             await canal.send(embed=embed)
             
-
 @bot.command()   # mensaje de los roles
 async def roles(ctx):
     global role_message_id_1, role_message_id_2  # IDs para uso en eventos
@@ -183,10 +195,7 @@ emoji_to_role = {
     "🔔": 1380058154213183488   # Notificaciones
 }
 
-role_message_id_1 = 1381020934676156446
-role_message_id_2 = 1381020944264597574
-
-@bot.event
+@bot.event  #asignar roles
 async def on_raw_reaction_add(payload):
     print(f"➕ Reacción añadida: emoji={payload.emoji}, mensaje={payload.message_id}, usuario={payload.user_id}")
 
@@ -209,7 +218,7 @@ async def on_raw_reaction_add(payload):
     else:
         print(f"❌ Emoji no mapeado: {emoji}")
 
-@bot.event
+@bot.event  #quitar roles
 async def on_raw_reaction_remove(payload):
     print(f"🗑️ Reacción removida: emoji={payload.emoji}, mensaje={payload.message_id}, usuario={payload.user_id}")
 
@@ -240,8 +249,6 @@ async def on_raw_reaction_remove(payload):
     else:
         print(f"❌ Emoji no mapeado: {emoji}")
 
-
-
 @bot.command()  # 🧹 Comando para limpiar mensajes
 async def limpiar(ctx):
     rol = discord.utils.get(ctx.author.roles, id=ROL_AUTORIZADO_ID)
@@ -252,13 +259,71 @@ async def limpiar(ctx):
     else:
         await ctx.send("❌ No tienes permiso para usar este comando.")
    
+@bot.command()  #meter un bot a un vc
+async def join(ctx):
+    if ctx.author.voice:
+        channel = ctx.author.voice.channel
+        await channel.connect()
+        await ctx.send("🔊 Conectado al canal de voz.")
+    else:
+        await ctx.send("❌ Debes estar en un canal de voz.")
+
+@bot.command() #repoducir una cansion
+async def play(ctx, *, query):
+    vc = ctx.voice_client
+
+    if not vc:
+        if ctx.author.voice:
+            channel = ctx.author.voice.channel
+            vc = await channel.connect()
+        else:
+            await ctx.send("❌ Debes estar en un canal de voz.")
+            return
+
+    await ctx.send(f"🔍 Buscando: `{query}`")
+
+    ytdlp_opts = {
+        'format': 'bestaudio/best',
+        'noplaylist': True,
+        'quiet': True,
+        'default_search': 'ytsearch',
+        'extract_flat': 'in_playlist',
+    }
+
+    with yt_dlp.YoutubeDL(ytdlp_opts) as ydl:
+        info = ydl.extract_info(query, download=False)['entries'][0]
+        url = info['url']
+        title = info['title']
+
+    ffmpeg_options = {
+        'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5',
+        'options': '-vn -loglevel quiet -ac 2 -f s16le -ar 48000'
+
+    }
+
+    source = discord.FFmpegPCMAudio(url, **ffmpeg_options)
+    vc.play(source)
+
+    await asyncio.sleep(1)  # Espera 1 segundo para que empiece a reproducir
+    print(f"Está reproduciendo: {vc.is_playing()}")
+
+
+    await ctx.send(f"🎶 Reproduciendo: **{title}**")
+    
+@bot.command() #sacar el bot de un canal de voz
+async def stop(ctx):
+    vc = ctx.voice_client
+    if vc:
+        await vc.disconnect()
+        await ctx.send("⛔ Bot desconectado.")
+    else:
+        await ctx.send("❌ No estoy en ningún canal de voz.")
 
 
 @bot.event  # ✅ Confirmación de que el bot está listo
 async def on_ready():
     bot.add_view(AceptarReglas())
     print(f"Estamos dentro como {bot.user}")
-
 
 
 bot.run(secrets.TOKEN)

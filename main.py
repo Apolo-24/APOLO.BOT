@@ -23,6 +23,10 @@ ROL_MIEMBRO_ID = 1365512945551020062
 ROL_AUTORIZADO_ID = 1380054848598442015
 ADMIN_IDS = [1268620891412107264]
 
+@bot.command()
+async def hola(ctx):
+    await ctx.send('¡Hola!')
+    
 @bot.event  # 🎉 Bienvenida mejorada con embed
 async def on_member_join(member):
     canal = bot.get_channel(JOIN_CHANNEL_ID)

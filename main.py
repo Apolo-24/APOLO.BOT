@@ -120,6 +120,7 @@ if YTDL_AVAILABLE:
 
 @bot.event
 async def on_ready():
+    bot.add_view(AceptarReglas())
     print(f'🤖 {bot.user} ha iniciado sesión!')
     print(f'🆔 ID del bot: {bot.user.id}')
     print(f'🗣️ gTTS disponible: {"✅" if GTTS_AVAILABLE else "❌"}')

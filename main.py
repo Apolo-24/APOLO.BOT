@@ -1026,10 +1026,5 @@ async def limpiar(ctx):
         await ctx.send("❌ No tienes permiso para usar este comando.")
 
 
-@bot.event  # ✅ Confirmación de que el bot está listo
-async def on_ready():
-    bot.add_view(AceptarReglas())
-    print(f"Estamos dentro como {bot.user}")
-
 webserver.keep_alive()
 bot.run(DISCORD_TOKEN)

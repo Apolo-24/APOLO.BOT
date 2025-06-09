@@ -97,14 +97,25 @@ if YTDL_AVAILABLE:
             loop = loop or asyncio.get_event_loop()
             try:
                 data = await loop.run_in_executor(None, lambda: ytdl.extract_info(url, download=not stream))
-                
+
+                # Si es una lista de resultados (como ytsearch:...), revisamos los primeros válidos
                 if 'entries' in data:
-                    data = data['entries'][0]
-                
-                filename = data['url'] if stream else ytdl.prepare_filename(data)
-                return cls(discord.FFmpegPCMAudio(filename, **ffmpeg_options), data=data)
+                    for entry in data['entries']:
+                        if not entry:
+                            continue
+                        try:
+                            filename = entry['url'] if stream else ytdl.prepare_filename(entry)
+                            return cls(discord.FFmpegPCMAudio(filename, **ffmpeg_options), data=entry)
+                        except Exception as inner_e:
+                            print(f"[WARNING] Error con entrada: {entry.get('title', 'sin título')} - {inner_e}")
+                    raise Exception("❌ Ningún resultado válido encontrado.")
+                else:
+                    # Si no es una búsqueda, es una URL directa
+                    filename = data['url'] if stream else ytdl.prepare_filename(data)
+                    return cls(discord.FFmpegPCMAudio(filename, **ffmpeg_options), data=data)
+
             except Exception as e:
-                print(f"Error en YTDLSource: {e}")
+                print(f"[ERROR] Error en YTDLSource.from_url: {e}")
                 raise e
 
 @bot.event

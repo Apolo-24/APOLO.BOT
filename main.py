@@ -11,6 +11,7 @@ import re
 
 DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
 
+
    
 # Importación segura de gTTS
 try:

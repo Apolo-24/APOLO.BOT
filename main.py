@@ -6,7 +6,7 @@ import asyncio
 import os
 import re
 
-DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
+DISCORD_TOKEN = os.getenv("DISCORD_TOKEN") #new codigo
 
 try:
     from gtts import gTTS

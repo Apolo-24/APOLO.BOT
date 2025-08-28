@@ -7,7 +7,6 @@ import os
 import re
 
 
-
 DISCORD_TOKEN = os.getenv("DISCORD_TOKEN") #new codigo
 
 try:
